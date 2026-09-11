@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1e3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="员工管理">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>员工照片管理系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1e3a5f;
+  --bg: #f1f5f9;
+  --card-bg: #fff;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+}
+body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+
+/* Header */
+.app-header {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  color: #fff; padding: 12px 24px;
+  display: flex; align-items: center; gap: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.app-header h1 { font-size: 18px; white-space: nowrap; }
+.stats-badge {
+  background: rgba(255,255,255,0.15);
+  padding: 4px 14px; border-radius: 16px; font-size: 13px; white-space: nowrap;
+}
+.search-box { flex: 1; max-width: 300px; position: relative; }
+.search-box input {
+  width: 100%; padding: 7px 12px 7px 32px;
+  border: none; border-radius: 16px; font-size: 13px;
+  outline: none; background: rgba(255,255,255,0.95); font-family: inherit;
+}
+.search-box input::placeholder { color: #94a3b8; }
+.search-box .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px; }
+.header-actions { display: flex; gap: 8px; }
+.btn {
+  padding: 7px 16px; border: none; border-radius: 6px;
+  font-size: 13px; font-family: inherit; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap; font-weight: 600;
+}
+.btn-primary { background: #fff; color: var(--primary); }
+.btn-primary:hover { background: #eff6ff; }
+.btn-secondary { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+.btn-secondary:hover { background: rgba(255,255,255,0.3); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #b91c1c; }
+.btn-save { background: var(--primary); color: #fff; }
+.btn-save:hover { background: #1d4ed8; }
+.btn-cancel { background: #e2e8f0; color: var(--text); }
+.btn-cancel:hover { background: #cbd5e1; }
+
+/* Layout */
+.app-body { display: flex; height: calc(100vh - 52px); }
+.sidebar {
+  width: 220px; background: var(--card-bg);
+  box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+  overflow-y: auto; flex-shrink: 0;
+}
+.nav-title { padding: 14px 18px 6px; font-size: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+.nav-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 18px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+  transition: all 0.15s; font-size: 13px; color: var(--text);
+}
+.nav-item:hover { background: #eff6ff; color: var(--primary); }
+.nav-item.active { background: var(--primary); color: #fff; }
+.nav-item.active .badge { background: rgba(255,255,255,0.25); color: #fff; }
+.badge { background: #e2e8f0; color: var(--text-muted); padding: 1px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+/* Main */
+.main { flex: 1; overflow-y: auto; padding: 16px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.toolbar-info { font-size: 14px; color: var(--text-muted); }
+.toolbar-info strong { color: var(--text); }
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+.emp-card {
+  background: var(--card-bg); border-radius: 8px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;
+  position: relative;
+}
+.emp-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
+.emp-photo {
+  width: 100%; height: 180px; object-fit: cover; cursor: pointer;
+  background: #f1f5f9;
+}
+.emp-info { padding: 8px 10px; text-align: center; }
+.emp-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.emp-dept { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.emp-actions {
+  display: flex; gap: 4px; padding: 0 8px 8px; justify-content: center;
+}
+.emp-actions button {
+  padding: 3px 10px; border: none; border-radius: 4px;
+  font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 600;
+  transition: all 0.15s;
+}
+.act-edit { background: #dbeafe; color: #1e40af; }
+.act-edit:hover { background: #bfdbfe; }
+.act-del { background: #fee2e2; color: #991b1b; }
+.act-del:hover { background: #fecaca; }
+
+/* Empty state */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 60%; color: var(--text-muted); font-size: 16px; gap: 12px;
+}
+.empty-state .icon { font-size: 48px; opacity: 0.3; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); z-index: 1000;
+  justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 10px; width: 420px; max-width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+  animation: slideUp 0.2s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-small { width: 360px; }
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header h2 { font-size: 16px; color: var(--text); }
+.modal-close {
+  background: none; border: none; font-size: 22px; cursor: pointer;
+  color: var(--text-muted); line-height: 1; padding: 0;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 12px 20px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+
+/* Upload area */
+.upload-area {
+  width: 160px; height: 200px; margin: 0 auto 16px;
+  border: 2px dashed var(--border); border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; overflow: hidden; position: relative;
+}
+.upload-area:hover { border-color: var(--primary); background: #eff6ff; }
+.upload-area.drag-over { border-color: var(--primary); background: #dbeafe; }
+.upload-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.upload-placeholder { text-align: center; color: var(--text-muted); padding: 12px; }
+.upload-placeholder .plus { font-size: 32px; color: var(--primary); margin-bottom: 4px; }
+.upload-placeholder p { font-size: 12px; margin-top: 4px; }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 14px; font-family: inherit; outline: none;
+  transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+.delete-warning { color: var(--danger); font-size: 13px; margin-top: 8px; }
+
+/* Photo overlay */
+.photo-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.9); z-index: 2000;
+  justify-content: center; align-items: center; cursor: zoom-out;
+}
+.photo-overlay.show { display: flex; }
+.photo-overlay img { max-width: 80%; max-height: 80%; border-radius: 8px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: var(--text); color: #fff; padding: 10px 24px;
+  border-radius: 8px; font-size: 14px; z-index: 3000;
+  opacity: 0; transition: all 0.3s; pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.warning { background: var(--warning); }
+
+/* Loading */
+.loading-screen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg); z-index: 5000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px;
+}
+.loading-screen .spinner {
+  width: 40px; height: 40px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-screen p { color: var(--text-muted); font-size: 14px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <p id="loadingText">正在加载员工数据...</p>
+</div>
+
+<div class="app-header" style="display:none;" id="appHeader">
+  <h1>员工照片管理系统</h1>
+  <div class="stats-badge" id="statsBadge">共 0 人</div>
+  <div class="search-box">
+    <span class="icon">&#128269;</span>
+    <input type="text" id="searchInput" placeholder="搜索员工姓名..." oninput="handleSearch(this.value)">
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openAddModal()">+ 添加员工</button>
+    <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+    <label class="btn btn-secondary" style="cursor:pointer;">
+      导入数据
+      <input type="file" accept=".json" style="display:none;" onchange="importData(event)">
+    </label>
+    <button class="btn btn-secondary" onclick="resetData()">重置数据</button>
+  </div>
+</div>
+
+<div class="app-body" style="display:none;" id="appBody">
+  <div class="sidebar">
+    <div class="nav-title">科室列表</div>
+    <div class="nav-item active" onclick="selectDept(-1, this)" id="nav-all">
+      <span>全部员工</span>
+      <span class="badge" id="count-all">0</span>
+    </div>
+    <div id="deptNav"></div>
+  </div>
+  <div class="main">
+    <div class="toolbar">
+      <div class="toolbar-info" id="toolbarInfo">显示全部员工</div>
+    </div>
+    <div class="employee-grid" id="empGrid"></div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="icon">&#128100;</div>
+      <p>暂无员工数据</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">添加员工</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoInput').click()">
+        <img id="photoPreview" style="display:none;" alt="预览">
+        <div class="upload-placeholder" id="uploadPlaceholder">
+          <div class="plus">+</div>
+          <p>点击或拖拽照片到此处</p>
+          <p style="font-size:11px;color:#94a3b8;">支持 JPG、PNG 等格式</p>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
+      </div>
+      <div class="form-group">
+        <label>员工姓名</label>
+        <input type="text" id="nameInput" placeholder="请输入员工姓名" onkeydown="if(event.key==='Enter')saveEmployee()">
+      </div>
+      <div class="form-group">
+        <label>所属科室</label>
+        <select id="deptSelect"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn btn-save" onclick="saveEmployee()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal modal-small">
+    <div class="modal-header">
+      <h2>确认删除</h2>
+    </div>
+    <div class="modal-body">
+      <p>确定要删除 <strong id="deleteName"></strong> 吗？</p>
+      <p class="delete-warning">此操作不可撤销</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<div class="photo-overlay" id="photoOverlay" onclick="this.classList.remove('show')">
+  <img id="bigPhoto" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="员工数据.js"></script>
+<script>
+var DB_NAME = 'EmployeeDB';
+var DB_VERSION = 1;
+var STORE_EMP = 'employees';
+var STORE_META = 'meta';
+
+var allEmployees = [];
+var allDepts = [];
+var currentDept = -1;
+var searchQuery = '';
+var editingId = null;
+var tempPhoto = null;
+var deletingId = null;
+
+function openDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_EMP)) {
+        db.createObjectStore(STORE_EMP, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(STORE_META)) {
+        db.createObjectStore(STORE_META, { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = function() { resolve(req.result); };
+    req.onerror = function() { reject(req.error); };
+  });
+}
+
+function dbPut(store, value) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).put(value);
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error); };
+    });
+  });
+}
+
+function dbGetAll(store) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction(store, 'readonly');
+      var req = tx.objectStore(store).getAll();
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+function dbDelete(store, id) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).delete(id);
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error); };
+    });
+  });
+}
+
+function dbClear(store) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).clear();
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error); };
+    });
+  });
+}
+
+function dbBulkPut(store, items) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction(store, 'readwrite');
+      var os = tx.objectStore(store);
+      items.forEach(function(item) { os.put(item); });
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function() { reject(tx.error); };
+    });
+  });
+}
+
+function dbGet(store, key) {
+  return openDB().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction(store, 'readonly');
+      var req = tx.objectStore(store).get(key);
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+async function init() {
+  try {
+    var metaData = await dbGet(STORE_META, 'initialized');
+    if (!metaData) {
+      document.getElementById('loadingText').textContent = '正在初始化数据...';
+      if (window.EMPLOYEE_DATA && window.EMPLOYEE_DATA.employees) {
+        await dbBulkPut(STORE_EMP, window.EMPLOYEE_DATA.employees);
+        await dbPut(STORE_META, { key: 'initialized', value: true, count: window.EMPLOYEE_DATA.employees.length });
+        allDepts = window.EMPLOYEE_DATA.depts;
+        await dbPut(STORE_META, { key: 'depts', value: allDepts });
+      }
+    } else {
+      var deptsData = await dbGet(STORE_META, 'depts');
+      allDepts = deptsData ? deptsData.value : (window.EMPLOYEE_DATA ? window.EMPLOYEE_DATA.depts : []);
+    }
+
+    allEmployees = await dbGetAll(STORE_EMP);
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appHeader').style.display = 'flex';
+    document.getElementById('appBody').style.display = 'flex';
+
+    renderSidebar();
+    renderMain();
+    populateDeptSelect();
+  } catch(e) {
+    document.getElementById('loadingText').textContent = '加载失败：' + e.message;
+    console.error(e);
+  }
+}
+
+function renderSidebar() {
+  var html = '';
+  allDepts.forEach(function(d) {
+    var count = allEmployees.filter(function(e) { return e.dept === d.id; }).length;
+    html += '<div class="nav-item" onclick="selectDept(' + d.id + ', this)" id="nav-' + d.id + '">' +
+      '<span>' + d.name + '</span>' +
+      '<span class="badge">' + count + '</span>' +
+    '</div>';
+  });
+  document.getElementById('deptNav').innerHTML = html;
+  document.getElementById('count-all').textContent = allEmployees.length;
+  document.getElementById('statsBadge').textContent = '共 ' + allEmployees.length + ' 人';
+}
+
+function selectDept(deptId, el) {
+  currentDept = deptId;
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  if (deptId === -1) {
+    document.getElementById('nav-all').classList.add('active');
+  } else {
+    el.classList.add('active');
+  }
+  renderMain();
+}
+
+function renderMain() {
+  var filtered = getFilteredEmployees();
+  var grid = document.getElementById('empGrid');
+  var empty = document.getElementById('emptyState');
+
+  var deptName = currentDept === -1 ? '全部' : (allDepts.find(function(d) { return d.id === currentDept; }) || {}).name || '';
+  var info = '显示' + (deptName ? '【' + deptName + '】' : '') + ' <strong>' + filtered.length + '</strong> 人';
+  if (searchQuery) info += '（搜索："' + searchQuery + '"）';
+  document.getElementById('toolbarInfo').innerHTML = info;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  var html = '';
+  filtered.forEach(function(emp) {
+    var deptName = (allDepts.find(function(d) { return d.id === emp.dept; }) || {}).name || '';
+    html += '<div class="emp-card">' +
+      '<img class="emp-photo" src="' + emp.photo + '" alt="' + emp.name + '" onclick="showPhoto(\'' + emp.id + '\')" loading="lazy">' +
+      '<div class="emp-info">' +
+        '<div class="emp-name">' + escapeHtml(emp.name) + '</div>' +
+        '<div class="emp-dept">' + deptName + '</div>' +
+      '</div>' +
+      '<div class="emp-actions">' +
+        '<button class="act-edit" onclick="openEditModal(' + emp.id + ')">编辑</button>' +
+        '<button class="act-del" onclick="openDeleteModal(' + emp.id + ')">删除</button>' +
+      '</div>' +
+    '</div>';
+  });
+  grid.innerHTML = html;
+}
+
+function getFilteredEmployees() {
+  return allEmployees.filter(function(e) {
+    var deptMatch = currentDept === -1 || e.dept === currentDept;
+    var searchMatch = !searchQuery || e.name.indexOf(searchQuery) !== -1;
+    return deptMatch && searchMatch;
+  }).sort(function(a, b) {
+    if (a.dept !== b.dept) return a.dept - b.dept;
+    return a.name.localeCompare(b.name, 'zh');
+  });
+}
+
+function handleSearch(val) {
+  searchQuery = val.trim();
+  renderMain();
+}
+
+function populateDeptSelect() {
+  var sel = document.getElementById('deptSelect');
+  sel.innerHTML = '';
+  allDepts.forEach(function(d) {
+    var opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    sel.appendChild(opt);
+  });
+}
+
+function openAddModal() {
+  editingId = null;
+  tempPhoto = null;
+  document.getElementById('modalTitle').textContent = '添加员工';
+  document.getElementById('nameInput').value = '';
+  document.getElementById('photoPreview').src = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('uploadPlaceholder').style.display = '';
+  document.getElementById('deptSelect').selectedIndex = 0;
+  document.getElementById('editModal').classList.add('show');
+  setTimeout(function() { document.getElementById('nameInput').focus(); }, 100);
+}
+
+function openEditModal(id) {
+  var emp = allEmployees.find(function(e) { return e.id === id; });
+  if (!emp) return;
+  editingId = id;
+  tempPhoto = emp.photo;
+  document.getElementById('modalTitle').textContent = '编辑员工';
+  document.getElementById('nameInput').value = emp.name;
+  document.getElementById('deptSelect').value = emp.dept;
+  document.getElementById('photoPreview').src = emp.photo;
+  document.getElementById('photoPreview').style.display = '';
+  document.getElementById('uploadPlaceholder').style.display = 'none';
+  document.getElementById('editModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('show');
+  editingId = null;
+  tempPhoto = null;
+}
+
+function handlePhotoSelect(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  processPhotoFile(file);
+}
+
+function processPhotoFile(file) {
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件', 'error');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('图片大小不能超过10MB', 'error');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    compressImage(e.target.result, 400, 0.8, function(compressed) {
+      tempPhoto = compressed;
+      var preview = document.getElementById('photoPreview');
+      preview.src = compressed;
+      preview.style.display = '';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function compressImage(dataUrl, maxSize, quality, callback) {
+  var img = new Image();
+  img.onload = function() {
+    var canvas = document.createElement('canvas');
+    var w = img.width, h = img.height;
+    if (max(w, h) > maxSize) {
+      var ratio = maxSize / max(w, h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    try {
+      callback(canvas.toDataURL('image/jpeg', quality));
+    } catch(e) {
+      callback(dataUrl);
+    }
+  };
+  img.onerror = function() { callback(dataUrl); };
+  img.src = dataUrl;
+}
+
+function max(a, b) { return a > b ? a : b; }
+
+var uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', function(e) { this.classList.remove('drag-over'); });
+uploadArea.addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) processPhotoFile(file);
+});
+
+async function saveEmployee() {
+  var name = document.getElementById('nameInput').value.trim();
+  var dept = parseInt(document.getElementById('deptSelect').value);
+  if (!name) { showToast('请输入员工姓名', 'error'); return; }
+  if (!tempPhoto) { showToast('请上传员工照片', 'error'); return; }
+
+  if (editingId !== null) {
+    var emp = allEmployees.find(function(e) { return e.id === editingId; });
+    if (emp) {
+      emp.name = name;
+      emp.dept = dept;
+      emp.photo = tempPhoto;
+      await dbPut(STORE_EMP, emp);
+      showToast('员工信息已更新', 'success');
+    }
+  } else {
+    var newId = allEmployees.length > 0 ? Math.max.apply(null, allEmployees.map(function(e) { return e.id; })) + 1 : 1;
+    var newEmp = { id: newId, name: name, dept: dept, photo: tempPhoto };
+    allEmployees.push(newEmp);
+    await dbPut(STORE_EMP, newEmp);
+    showToast('员工已添加', 'success');
+  }
+  closeModal();
+  renderSidebar();
+  renderMain();
+}
+
+function openDeleteModal(id) {
+  var emp = allEmployees.find(function(e) { return e.id === id; });
+  if (!emp) return;
+  deletingId = id;
+  document.getElementById('deleteName').textContent = emp.name;
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('show');
+  deletingId = null;
+}
+
+async function confirmDelete() {
+  if (deletingId === null) return;
+  await dbDelete(STORE_EMP, deletingId);
+  allEmployees = allEmployees.filter(function(e) { return e.id !== deletingId; });
+  closeDeleteModal();
+  renderSidebar();
+  renderMain();
+  showToast('员工已删除', 'success');
+}
+
+function showPhoto(id) {
+  var emp = allEmployees.find(function(e) { return e.id === id; });
+  if (emp) {
+    document.getElementById('bigPhoto').src = emp.photo;
+    document.getElementById('photoOverlay').classList.add('show');
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+var toastTimer = null;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+function exportData() {
+  var data = { depts: allDepts, employees: allEmployees };
+  var json = JSON.stringify(data);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '员工数据备份_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已导出', 'success');
+}
+
+function importData(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.employees || !data.depts) { showToast('数据格式不正确', 'error'); return; }
+      if (!confirm('导入将替换当前所有数据（' + allEmployees.length + '人），确定继续吗？')) return;
+      dbClear(STORE_EMP).then(function() {
+        return dbBulkPut(STORE_EMP, data.employees);
+      }).then(function() {
+        allDepts = data.depts;
+        return dbPut(STORE_META, { key: 'depts', value: allDepts });
+      }).then(function() {
+        allEmployees = data.employees;
+        renderSidebar();
+        renderMain();
+        populateDeptSelect();
+        showToast('成功导入 ' + data.employees.length + ' 条数据', 'success');
+      });
+    } catch(err) {
+      showToast('导入失败：' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+async function resetData() {
+  if (!confirm('重置将恢复初始数据，所有增删改操作将丢失，确定继续吗？')) return;
+  document.getElementById('loadingText').textContent = '正在重置数据...';
+  document.getElementById('loadingScreen').style.display = 'flex';
+  await dbClear(STORE_EMP);
+  await dbClear(STORE_META);
+  if (window.EMPLOYEE_DATA) {
+    await dbBulkPut(STORE_EMP, window.EMPLOYEE_DATA.employees);
+    await dbPut(STORE_META, { key: 'initialized', value: true, count: window.EMPLOYEE_DATA.employees.length });
+    await dbPut(STORE_META, { key: 'depts', value: window.EMPLOYEE_DATA.depts });
+    allDepts = window.EMPLOYEE_DATA.depts;
+  }
+  allEmployees = await dbGetAll(STORE_EMP);
+  document.getElementById('loadingScreen').style.display = 'none';
+  renderSidebar();
+  renderMain();
+  populateDeptSelect();
+  showToast('数据已重置', 'success');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeDeleteModal();
+    document.getElementById('photoOverlay').classList.remove('show');
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      console.log('Service Worker registered');
+    }).catch(function(err) {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
+
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  showToast('可以安装到主屏幕了，点击右上角菜单选择"添加到主屏幕"', 'success');
+});
+
+init();
+</script>
+
+</body>
+</html>
